@@ -159,13 +159,18 @@ class QLearner(object):
     ######
 
     # YOUR CODE HERE
-    # next state Q-value (i.e. target is just rew_t_ph, not rew_t_ph + gamma * q_tp1)
-    self.q_func_network = q_func(obs_t_float, self.num_actions, scope="q_func", reuse=False)
-    self.target_q_func_network = q_func(obs_tp1_float, self.num_actions, scope="target_q_func", reuse=False)
+    self.q = q_func(obs_t_float, self.num_actions, scope="q_func", reuse=False)
+    self.target_q = q_func(obs_tp1_float, self.num_actions, scope="target_q_func", reuse=False)
 
-    max_target_q_val = tf.reduce_max(self.target_q_func_network, axis=1)
-    y = self.rew_t_ph + (1 - self.done_mask_ph)* gamma * max_target_q_val
-    q_val = tf.reduce_sum(tf.multiply(self.q_func_network, tf.one_hot(self.act_t_ph, self.num_actions)), axis=1)
+    if not double_q:
+        max_target_q_val = tf.reduce_max(self.target_q, axis=1)
+    else:
+        q_action_eval = q_func(obs_tp1_float, self.num_actions, scope="q_func", reuse=True)
+        max_actions = tf.argmax(q_action_eval, axis=1)
+        max_target_q_val = tf.reduce_sum(tf.multiply(self.target_q, tf.one_hot(max_actions, self.num_actions)), axis=1)
+
+    y = self.rew_t_ph + (1 - self.done_mask_ph) * gamma * max_target_q_val
+    q_val = tf.reduce_sum(tf.multiply(self.q, tf.one_hot(self.act_t_ph, self.num_actions)), axis=1)
 
     self.total_error = tf.reduce_mean(huber_loss(q_val - y))
 
@@ -247,7 +252,8 @@ class QLearner(object):
         action = self.env.action_space.sample()
     else:
         encoded_obs = self.replay_buffer.encode_recent_observation()
-        action_logits = self.session.run(self.q_func_network, feed_dict={self.obs_t_ph: np.expand_dims(encoded_obs, axis=0)})
+        action_logits = self.session.run(self.q, feed_dict={self.obs_t_ph: np.expand_dims(encoded_obs, axis=0)})
+
         action = np.argmax(action_logits[0, :]) # choose action with max value
 
     obs, rew, done, info = self.env.step(action)

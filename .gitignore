@@ -1,6 +1,8 @@
 venv/
+env/
 *.pkl
 .vscode/
 __pycache__/
 *.tgz
 cuda*
+notebooks/
