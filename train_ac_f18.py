@@ -202,14 +202,14 @@ class Agent(object):
         if self.discrete:
             sy_logits_na = policy_parameters
             # YOUR HW2 CODE_HERE
-            sy_logprob_n = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=sy_ac_na, logits=sy_logits_na)
+            sy_logprob_n = -tf.nn.sparse_softmax_cross_entropy_with_logits(labels=sy_ac_na, logits=sy_logits_na)
         else:
             sy_mean, sy_logstd = policy_parameters
             # YOUR HW2 CODE_HERE
             # calculate the z score of the sampled actions under the policy
             sy_z = (sy_ac_na - sy_mean) / tf.exp(sy_logstd)
             # this maximizes likelihood by pushing z towards 0 (mean of distribution)
-            sy_logprob_n = 0.5 * tf.reduce_mean(tf.square(sy_z), axis=1)
+            sy_logprob_n = -0.5 * tf.reduce_mean(tf.square(sy_z), axis=1)
         return sy_logprob_n
 
     def build_computation_graph(self):
